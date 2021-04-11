@@ -1,0 +1,18 @@
+{
+    "walrus": {
+        "username": "walrus",
+        "password": "$2b$10$QJ3Wl/pLg8E1xPGDvjT/QeR/E5GKSlmMYAyFu4GKLvC2qF7iWGb2a"
+    },
+    "teacher": {
+        "username": "teacher",
+        "password": "$2b$10$A3nxAFKg9pFAss6EzWjkAOaYun4K/scIWTWe9yErmj1JTMALp1IAy"
+    },
+    "student": {
+        "username": "student",
+        "password": "$2b$10$6zYd.SsMVSwpAx2ngFfgm.q66gOsYphoqpw/9M.Iaac5ycIBcc/JW"
+    },
+    "scatman": {
+        "username": "scatman",
+        "password": "$2b$10$JuiGXTwkSRyDSsAClqleq.8Q4blMa1FeZg0FnWK81dY4fPeQ3F3BG"
+    }
+}
