@@ -1,6 +1,15 @@
 # nsaa-express
 Express with passport code for MCybers-NSAA's lab session 2
 
+# Table of Contents  
+- [Installation](#Installation)
+- [Do-it-yourself exercises](#Do-it-yourself-exercises)
+    - [1. Exchange the JWT using cookies](#1-Exchange-the-JWT-using-cookies)
+    - [2. Create the fortune-teller endpoint](#2-Create-the-fortune-teller-endpoint)
+    - [3. Add a logout endpoint](#3-Add-a-logout-endpoint)
+    - [4. Add bcrypt or scrypt to the login process](#4-Add-bcrypt-or-scrypt-to-the-login-process)
+- [OAuth support (Google)](#OAuth-support-Google)
+
 # Installation
 ``` bash
 $ git clone https://github.com/MrJavy/nsaa-express.git
@@ -8,6 +17,13 @@ $ cd nsaa-express
 $ npm install
 $ node index.js
 ```
+
+Remember to load the secret codes for OAuth in `index.js`:
+``` js
+const GOOGLE_CLIENT_ID     = "..."
+const GOOGLE_CLIENT_SECRET = "..."
+```
+
 # Do-it-yourself exercises
 ## 1. Exchange the JWT using cookies
 We first add the cookie-parser middleware to our application:
@@ -94,4 +110,45 @@ function (username, password, done) {
     }
     return done(null, false)
 }))
+```
+# OAuth support (Google)
+After obtaining credentials via console.cloud.google.com , we can require Passport's support for Google OAuth.2.0 
+``` js
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GOOGLE_CLIENT_ID     = "..."
+const GOOGLE_CLIENT_SECRET = "..."
+```
+Then we can code our strategy as:
+``` js
+passport.use(new GoogleStrategy({
+    clientID    : GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET,
+    callbackURL : "http://localhost:3000/auth/google/callback"
+  },
+  function(accessToken, refreshToken, profile, done) {
+    if(profile){
+        const user = { username: profile.id, description: 'A nice user' }
+        return done(null, user)
+    }
+    return done(null, false)
+}));
+```
+So that we can simply use it with:
+``` js
+// Login with Google
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile'] }));
+
+// Google login callback (create Google login token)
+app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login', session: false }),
+    function (req, res) {
+        // Successful authentication, redirect home.
+        res.cookie('auth', tokenize(req), {httpOnly:true, secure:true})
+        res.redirect('/')
+    }
+);
+```
+The only thing left is to include a link in our template to let the user access this functionality:
+``` html
+<a href='/auth/google'>Login with Google</a>
 ```
