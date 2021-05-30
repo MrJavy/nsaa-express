@@ -3,19 +3,19 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Login with Radius</title>
 </head>
 
 <body>
     <p><strong>Want to listen to the fortune-teller server?</strong></p>
-    <p>Please login to proceed</p>
-    <form action="/login" method="post">  <!-- when the formulary is submitted, it will be POSTed to /login-->
+    <p>Please login to proceed (only @upc.edu)</p>
+    <form action="/login_radius" method="post">  <!-- when the formulary is submitted, it will be POSTed to /login-->
         <div>
-            <label>Username:</label>
-            <input type="text" name="username" />
+            <label>Radius Username:</label>
+            <input type="text" name="username" /> @upc.edu
         </div>
         <div>
-            <label>Password:</label>
+            <label>Radius Password:</label>
             <input type="password" name="password" />
         </div>
         <div>
@@ -25,7 +25,7 @@
     <br>
     <a href='/auth/google'>Login with Google</a>
     &emsp;
-    <a href='/login_radius'>Login with Radius</a>
+    <a href='/login'>Login normally</a>
 </body>
 
 </html>

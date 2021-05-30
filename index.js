@@ -18,11 +18,19 @@ const DBConfig       = require('node-json-db/dist/lib/JsonDBConfig').Config
 
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
+const radius         = require('radius');
+const dgram          = require("dgram");
+
+
 // Secrets configuration
 // https://console.cloud.google.com/
-const { GOOGLE_CLIENT_ID } = require('./config.js')
+const { GOOGLE_CLIENT_ID }     = require('./config.js')
 const { GOOGLE_CLIENT_SECRET } = require('./config.js')
+const { RADIUS_SECRET }        = require('./config.js')
 
+// Radius configuration
+const RADIUS_IP   = "127.0.0.1";
+const RADIUS_PORT = 1812;
 
 
 /* DATABASE */
@@ -31,7 +39,7 @@ const db = new JsonDB(new DBConfig("users.db", true, true, '/'));
 
 register = (user, password) => { db.push('/' + user, { username: user, password: bcrypt.hashSync(password, 10) }) }
 
-register('walrus', 'walrus')
+register('walrus',  'walrus')
 register('teacher', 'walrus')
 register('student', 'nowalrus')
 register('scatman', 'nowalrus')
@@ -96,6 +104,46 @@ passport.use(new GoogleStrategy({
     return done(null, false)
 }));
 
+passport.use('radius', new LocalStrategy({
+    usernameField: 'username',   // it MUST match the name of the input field for the username in the login HTML formulary
+    passwordField: 'password',   // it MUST match the name of the input field for the password in the login HTML formulary
+    session      : false         // we will store a JWT in the cookie with all the required session data. Our server does not need to keep a session, it's stateless
+},
+function (username, password, done) {
+    username = username+'@upc.edu' 
+    // generate Radius request
+    var request = radius.encode({
+        code: "Access-Request",
+        secret: RADIUS_SECRET,
+        attributes: [
+            ['NAS-IP-Address', RADIUS_IP],
+            ['User-Name', username],
+            ['User-Password', password],
+        ]
+    })
+    // start a socket for communication
+    var rclient = dgram.createSocket("udp4");
+    // prepare reception routine
+    rclient.on('message', function(message) {
+        var response = radius.decode({packet: message, secret: RADIUS_SECRET})
+        // check validation
+        var valid_response = radius.verify_response({ 
+            response: message,
+            request : request,
+            secret  : RADIUS_SECRET
+        })
+        var isValidPass = valid_response && (response.code == 'Access-Accept');
+        // give access (or not)
+        if (isValidPass) {
+            const user = { username: username, description: 'A nice user' }
+            return done(null, user)
+        }
+        return done(null, false)
+    })
+    // send request 
+    rclient.send(request, 0, request.length, RADIUS_PORT, RADIUS_IP);
+}))
+
 
 
 /* APPLICATION */
@@ -125,7 +173,7 @@ app.get('/login', (req, res) => {
 // Create local login token
 app.post('/login',
     passport.authenticate('local', { failureRedirect: '/login', session: false }),
-    (req, res) => { //
+    (req, res) => {
         // we should create here the JWT for the fortune teller and send it to the user agent inside a cookie.
         res.cookie('auth', tokenize(req), {httpOnly:true, secure:true})
         res.redirect('/')
@@ -144,6 +192,22 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
         res.redirect('/')
     }
 );
+
+
+// Login with Radius
+app.get('/login_radius', (req, res) => {
+    res.sendFile('login_radius.html', {root: __dirname})
+})
+
+// Create Radius login token
+app.post('/login_radius',
+    passport.authenticate('radius', { failureRedirect: '/login_radius', session: false }),
+    (req, res) => {
+        // we should create here the JWT for the fortune teller and send it to the user agent inside a cookie.
+        res.cookie('auth', tokenize(req), {httpOnly:true, secure:true})
+        res.redirect('/')
+    }
+)
 
 app.get('/logout', (req,res) => {
     res.clearCookie('auth')
